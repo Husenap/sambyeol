@@ -27,6 +27,4 @@ jobs:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         FILE_PATH: .build\app\Debug\app.exe
       run: |
-        curl -H 'Content-Type: multipart/form-data' \
-        -X POST \
-        -F "file=@$FILE_PATH" $DISCORD_WEBHOOK
+        curl -H 'Content-Type: multipart/form-data' -X POST -F "file=@$FILE_PATH" $DISCORD_WEBHOOK
