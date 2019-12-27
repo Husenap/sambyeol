@@ -8,23 +8,23 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - name: General SCM
+      uses: actions/checkout@v1
+    
     - name: generate and build
       run: |
         cmake . -B.build -Ax64
         cmake --build .build
-        
-    - name: clang-format lint
-      uses: DoozyX/clang-format-lint-action@v0.5
-      with:
-        # Source folder to check formatting
-        source: app/
-        extensions: h,cpp
-        
+      
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        # Artifact name
         name: SamByeol
-        # Directory containing files to upload
         path: .build\app\Debug\app.exe
+
+    - name: Upload to Discord
+      uses: sinshutu/upload-to-discord@v2.0.0
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      with:
+        args: .build\app\Debug\app.exe
