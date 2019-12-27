@@ -14,13 +14,14 @@ public:
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)pThis);
 
 			pThis->mHwnd = hwnd;
+			pThis->mIsOpen = true;
 		} else {
 			LONG_PTR ptr = GetWindowLongPtr(hwnd, GWLP_USERDATA);
 			pThis        = reinterpret_cast<DERIVED_TYPE*>(ptr);
 		}
 
 		if (pThis) {
-			pThis->HandleMessage(uMsg, wParam, lParam);
+			return pThis->HandleMessage(uMsg, wParam, lParam);
 		} else {
 			return DefWindowProc(hwnd, uMsg, wParam, lParam);
 		}
@@ -50,10 +51,12 @@ public:
 	}
 
 	HWND Window() const { return mHwnd; }
+	bool IsOpen() const { return mIsOpen; }
 
 protected:
 	virtual LPCSTR ClassName() const                                       = 0;
 	virtual LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
 
 	HWND mHwnd;
+	bool mIsOpen;
 };
