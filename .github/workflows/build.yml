@@ -11,20 +11,20 @@ jobs:
     - name: General SCM
       uses: actions/checkout@v1
     
-    - name: generate and build
+    - name: Generate and Build
       run: |
         cmake . -B.build -Ax64
         cmake --build .build
       
-    - name: Upload artifact
+    - name: Upload Artifact to Github
       uses: actions/upload-artifact@v1.0.0
       with:
         name: SamByeol_$GITHUB_SHA
         path: .build\app\Debug\app.exe
 
-    - name: Upload to Discord
+    - name: Upload Artifact to Discord
+      run: |
+        curl -H "Content-Type: multipart/form-data" -X POST -F "file=@$FILE_PATH" $DISCORD_WEBHOOK
       env:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         FILE_PATH: .build/app/Debug/app.exe
-      run: |
-        curl -H 'Content-Type: multipart/form-data' -X POST -F "file=@$FILE_PATH" $DISCORD_WEBHOOK
