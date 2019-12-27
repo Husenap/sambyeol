@@ -23,8 +23,10 @@ jobs:
         path: .build\app\Debug\app.exe
 
     - name: Upload to Discord
-      uses: sinshutu/upload-to-discord@v2.0.0
       env:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-      with:
-        args: .build\app\Debug\app.exe
+        FILE_PATH: .build\app\Debug\app.exe
+      run: |
+        curl -H 'Content-Type: multipart/form-data' \
+        -X POST \
+        -F "file=@$FILE_PATH" $DISCORD_WEBHOOK
