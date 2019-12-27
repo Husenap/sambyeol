@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5.0)
-set(PROJECT_NAME "project_name")
+set(PROJECT_NAME "sambyeol")
 project(${PROJECT_NAME} C CXX)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
