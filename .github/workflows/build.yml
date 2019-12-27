@@ -1,0 +1,23 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: generate and build
+      run: |
+        cmake . -B.build -Ax64
+        cmake --build .build
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        # Artifact name
+        name: app.exe
+        # Directory containing files to upload
+        path: .build\app\Debug\
