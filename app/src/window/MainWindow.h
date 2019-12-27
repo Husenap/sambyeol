@@ -6,7 +6,7 @@ class MainWindow : public BaseWindow<MainWindow> {
 public:
 	MainWindow();
 
-	LPCSTR ClassName() const override { return "Main Window Class"; }
+	LPCWSTR ClassName() const override { return L"Main Window Class"; }
 	LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 
 private:

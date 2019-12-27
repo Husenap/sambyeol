@@ -18,7 +18,7 @@ int main() {
 		return hr;
 	}
 
-	if (!window.Create("SamByeol", WS_OVERLAPPEDWINDOW, 0, 0, 0, 500, 500)) {
+	if (!window.Create(L"삼별", WS_OVERLAPPEDWINDOW, 0, 0, 0, 500, 500)) {
 		std::cout << "Failed to create window!" << std::endl;
 		return 1;
 	}
@@ -62,4 +62,8 @@ int main() {
 	CoUninitialize();
 
 	return 0;
+}
+
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
+	main();
 }

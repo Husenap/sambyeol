@@ -30,7 +30,7 @@ public:
 	BaseWindow()
 	    : mHwnd(NULL) {}
 
-	BOOL Create(LPCSTR lpWindowName,
+	BOOL Create(LPCWSTR lpWindowName,
 	            DWORD dwStyle,
 	            DWORD dwExStyle = NULL,
 	            int x           = CW_USEDEFAULT,
@@ -54,7 +54,7 @@ public:
 	bool IsOpen() const { return mIsOpen; }
 
 protected:
-	virtual LPCSTR ClassName() const                                       = 0;
+	virtual LPCWSTR ClassName() const                                       = 0;
 	virtual LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
 
 	HWND mHwnd;
