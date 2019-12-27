@@ -8,16 +8,16 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - name: generate and build
+    - name: General SCM
+      uses: actions/checkout@v1
+    
+    - name: Generate and Build
       run: |
         cmake . -B.build -Ax64
         cmake --build .build
-        
-    - name: Upload artifact
+      
+    - name: Upload Artifact to Github
       uses: actions/upload-artifact@v1.0.0
       with:
-        # Artifact name
         name: SamByeol
-        # Directory containing files to upload
         path: .build\app\Debug\app.exe
