@@ -19,5 +19,5 @@ jobs:
     - name: Upload Artifact to Github
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: SamByeol_$GITHUB_SHA
+        name: SamByeol
         path: .build\app\Debug\app.exe
