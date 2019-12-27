@@ -21,10 +21,3 @@ jobs:
       with:
         name: SamByeol_$GITHUB_SHA
         path: .build\app\Debug\app.exe
-
-    - name: Upload Artifact to Discord
-      run: |
-        curl -H "Content-Type: multipart/form-data" -X POST -F "file=@$FILE_PATH" $DISCORD_WEBHOOK
-      env:
-        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        FILE_PATH: .build/app/Debug/app.exe
