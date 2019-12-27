@@ -19,5 +19,3 @@ jobs:
       with:
         # Artifact name
         name: app.exe
-        # Directory containing files to upload
-        path: .build\app\Debug\
