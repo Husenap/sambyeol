@@ -18,4 +18,6 @@ jobs:
       uses: actions/upload-artifact@v1.0.0
       with:
         # Artifact name
-        name: .build/app/Debug/app.exe
+        name: SamByeol
+        # Directory containing files to upload
+        path: .build\app\Debug\app.exe
