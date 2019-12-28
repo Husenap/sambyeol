@@ -29,6 +29,7 @@ int main() {
 	HACCEL hAccel = LoadAccelerators(GetModuleHandle(NULL), MAKEINTRESOURCE(IDR_ACCEL1));
 	if (!hAccel) {
 		std::cout << "Failed to load accelerator table" << std::endl;
+		return 1;
 	}
 
 	MSG msg = {};
