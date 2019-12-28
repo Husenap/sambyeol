@@ -1,6 +1,7 @@
 #pragma once
 
-#include <windows.h>
+#include <Windows.h>
+#include <d2d1.h>
 
 template <class DERIVED_TYPE>
 class BaseWindow {
@@ -14,7 +15,6 @@ public:
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)pThis);
 
 			pThis->mHwnd = hwnd;
-			pThis->mIsOpen = true;
 		} else {
 			LONG_PTR ptr = GetWindowLongPtr(hwnd, GWLP_USERDATA);
 			pThis        = reinterpret_cast<DERIVED_TYPE*>(ptr);
@@ -28,9 +28,10 @@ public:
 	}
 
 	BaseWindow()
-	    : mHwnd(NULL) {}
+	    : mHwnd(NULL)
+	    , mIsOpen(false) {}
 
-	BOOL Create(LPCSTR lpWindowName,
+	BOOL Create(LPCWSTR lpWindowName,
 	            DWORD dwStyle,
 	            DWORD dwExStyle = NULL,
 	            int x           = CW_USEDEFAULT,
@@ -52,9 +53,18 @@ public:
 
 	HWND Window() const { return mHwnd; }
 	bool IsOpen() const { return mIsOpen; }
+	inline RECT GetRect() const {
+		RECT rc;
+		GetClientRect(mHwnd, &rc);
+		return rc;
+	}
+	inline D2D1_SIZE_U GetSize() const {
+		RECT rc = GetRect();
+		return D2D1::SizeU(rc.right, rc.bottom);
+	}
 
 protected:
-	virtual LPCSTR ClassName() const                                       = 0;
+	virtual LPCWSTR ClassName() const                                      = 0;
 	virtual LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
 
 	HWND mHwnd;

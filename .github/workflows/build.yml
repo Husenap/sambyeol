@@ -11,13 +11,17 @@ jobs:
     - name: General SCM
       uses: actions/checkout@v1
     
-    - name: Generate and Build
-      run: |
-        cmake . -B.build -Ax64
-        cmake --build .build
+    - name: Generate
+      run: cmake . -B.build -Ax64
+    
+    - name: Build Debug
+      run: cmake --build .build --config Debug
+
+    - name: Build Release
+      run: cmake --build .build --config Release
       
     - name: Upload Artifact to Github
       uses: actions/upload-artifact@v1.0.0
       with:
         name: SamByeol
-        path: .build\app\Debug\app.exe
+        path: .build\app\Release\app.exe

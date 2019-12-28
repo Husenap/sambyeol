@@ -1,7 +1,9 @@
 ﻿#include <iostream>
 #include <thread>
 
+#include <ShObjIdl.h>
 #include <Windows.h>
+#include <atlbase.h>
 
 #include "window/MainWindow.h"
 
@@ -10,13 +12,13 @@ int main() {
 
 	HRESULT hr;
 
-	hr = CoInitializeEx(NULL, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE | COINIT_SPEED_OVER_MEMORY);
+	hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE | COINIT_SPEED_OVER_MEMORY);
 	if (FAILED(hr)) {
 		std::cout << "Failed to initialize the COM library" << std::endl;
 		return hr;
 	}
 
-	if (!window.Create("SamByeol", WS_OVERLAPPEDWINDOW, 0, 0, 0, 500, 500)) {
+	if (!window.Create(L"삼별", WS_OVERLAPPEDWINDOW, 0, 0, 0, 500, 500)) {
 		std::cout << "Failed to create window!" << std::endl;
 		return 1;
 	}
@@ -30,10 +32,15 @@ int main() {
 			DispatchMessage(&msg);
 		}
 
+		InvalidateRect(window.Window(), NULL, FALSE);
 		std::this_thread::yield();
 	}
 
 	CoUninitialize();
 
 	return 0;
+}
+
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
+	main();
 }
