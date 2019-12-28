@@ -1,0 +1,11 @@
+// clang-format off
+#include "resource.h"
+
+IDR_ACCEL1 ACCELERATORS
+{
+
+    0x4D,	ID_TOGGLE_MODE,		VIRTKEY,	CONTROL
+    0x70,	ID_DRAW_MODE,		VIRTKEY
+    0x71,	ID_SELECT_MODE,		VIRTKEY
+}
+// clang-format on
