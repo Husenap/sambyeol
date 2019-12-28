@@ -1,13 +1,13 @@
-#include "MainWindow.h"
+﻿#include "MainWindow.h"
 
 #pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
 
 #include <algorithm>
+#include <array>
 
 MainWindow::MainWindow()
-    : mDPIScaleX(1.f)
-    , mDPIScaleY(1.f)
-    , mEllipse(D2D1::Ellipse({0.f, 0.f}, 0.f, 0.f)) {}
+    : mEllipse(D2D1::Ellipse({0.f, 0.f}, 0.f, 0.f)) {}
 
 LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	switch (uMsg) {
@@ -15,7 +15,13 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &mFactory))) {
 			return -1;
 		}
-		InitializeDPIScale();
+		if (FAILED(DWriteCreateFactory(
+		        DWRITE_FACTORY_TYPE_SHARED, __uuidof(mWriteFactory), reinterpret_cast<IUnknown**>(&mWriteFactory)))) {
+			return -1;
+		}
+		if (FAILED(Initialize())) {
+			return -1;
+		}
 		mIsOpen = true;
 		return 0;
 	case WM_DESTROY:
@@ -35,11 +41,26 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	return TRUE;
 }
 
-void MainWindow::InitializeDPIScale() {
-	mFactory->GetDesktopDpi(&mDPIScaleX, &mDPIScaleY);
+HRESULT MainWindow::Initialize() {
+	HRESULT hr = S_OK;
 
-	mDPIScaleX /= 96.0f;
-	mDPIScaleY /= 96.0f;
+	if (SUCCEEDED(hr)) {
+		hr = mWriteFactory->CreateTextFormat(L"Roboto Mono",
+		                                     NULL,
+		                                     DWRITE_FONT_WEIGHT_NORMAL,
+		                                     DWRITE_FONT_STYLE_NORMAL,
+		                                     DWRITE_FONT_STRETCH_NORMAL,
+		                                     72.f,
+		                                     L"",
+		                                     &mTextFormat);
+	}
+	if (SUCCEEDED(hr)) {
+		mTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+		mTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+		mTextFormat->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+	}
+
+	return hr;
 }
 
 HRESULT MainWindow::CreateGraphicsResources() {
@@ -84,6 +105,8 @@ void MainWindow::OnPaint() {
 
 		mRenderTarget->BeginDraw();
 
+		mRenderTarget->SetTransform(D2D1::IdentityMatrix());
+
 		mRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::SkyBlue));
 		mRenderTarget->FillEllipse(mEllipse, mBrush);
 		mRenderTarget->DrawEllipse(mEllipse, mStroke);
@@ -98,6 +121,13 @@ void MainWindow::OnPaint() {
 		DrawClockHand(0.6f, hourAngle, 6.f);
 		DrawClockHand(0.85f, minuteAngle, 4.f);
 		DrawClockHand(0.9f, secondAngle, 2.f);
+
+		const static std::array<std::wstring, 12> numbers{
+		    L"일", L"이", L"삼", L"사", L"오", L"육", L"칠", L"팔", L"구", L"십", L"십일", L"십이"};
+		for (int i = 0; i < numbers.size(); ++i) {
+			float angle = (360.f / 12.f) * 0.01745f * (float)(i-2);
+			DrawNumber(angle, numbers[i]);
+		}
 
 		mRenderTarget->SetTransform(D2D1::IdentityMatrix());
 
@@ -116,6 +146,16 @@ void MainWindow::OnResize() {
 		CalculateLayout();
 		InvalidateRect(mHwnd, NULL, FALSE);
 	}
+}
+
+void MainWindow::DrawNumber(float angle, const std::wstring& number) {
+	float dist    = mEllipse.radiusY * 0.9f;
+	const float x = mEllipse.point.x + std::cosf(angle) * dist;
+	const float y = mEllipse.point.y + std::sinf(angle) * dist;
+
+	mRenderTarget->SetTransform(D2D1::Matrix3x2F::Scale(0.5f, 0.5f) * D2D1::Matrix3x2F::Translation(x, y));
+
+	mRenderTarget->DrawText(number.data(), number.size(), mTextFormat, D2D1::RectF(), mStroke);
 }
 
 void MainWindow::DrawClockHand(float handLength, float angle, float strokeWidth) {
