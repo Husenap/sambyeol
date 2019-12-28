@@ -12,7 +12,7 @@ int main() {
 
 	HRESULT hr;
 
-	hr = CoInitializeEx(NULL, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE | COINIT_SPEED_OVER_MEMORY);
+	hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE | COINIT_SPEED_OVER_MEMORY);
 	if (FAILED(hr)) {
 		std::cout << "Failed to initialize the COM library" << std::endl;
 		return hr;
@@ -32,30 +32,7 @@ int main() {
 			DispatchMessage(&msg);
 		}
 
-		CComPtr<IFileOpenDialog> pFileOpen;
-		hr = pFileOpen.CoCreateInstance(__uuidof(FileOpenDialog));
-
-		if (SUCCEEDED(hr)) {
-			CComQIPtr<IFileDialogCustomize> pFileDialogCustomize(pFileOpen);
-			if (pFileDialogCustomize) {
-				pFileDialogCustomize->AddText(10001, L"안녕하세요 여러분, 트와이스입니다!");
-			}
-
-			hr = pFileOpen->Show(NULL);
-			if (SUCCEEDED(hr)) {
-				CComPtr<IShellItem> pItem;
-				hr = pFileOpen->GetResult(&pItem);
-				if (SUCCEEDED(hr)) {
-					PWSTR pszFilePath;
-					hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-					if (SUCCEEDED(hr)) {
-						MessageBoxW(NULL, pszFilePath, L"File Path", MB_OK);
-						CoTaskMemFree(pszFilePath);
-					}
-				}
-			}
-		}
-
+		InvalidateRect(window.Window(), NULL, FALSE);
 		std::this_thread::yield();
 	}
 
