@@ -68,14 +68,12 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
 void MainWindow::HandleCommand(WORD command) {
 	switch (command) {
 	case ID_DRAW_MODE:
-		std::cout << "Draw mode!" << std::endl;
 		SetMode(Mode::DrawMode);
 		break;
 	case ID_SELECT_MODE:
 		SetMode(Mode::SelectMode);
 		break;
 	case ID_TOGGLE_MODE:
-		std::cout << "Toggle mode!" << std::endl;
 		if (mCurrentMode == Mode::DrawMode) {
 			SetMode(Mode::SelectMode);
 		} else {
