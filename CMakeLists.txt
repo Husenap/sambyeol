@@ -1,9 +1,10 @@
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.15.0)
 set(PROJECT_NAME "sambyeol")
 project(${PROJECT_NAME} C CXX)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 message("-- CONFIGURATION TYPES: ${CMAKE_CONFIGURATION_TYPES}")
+message("-- CMAKE VERSION: ${CMAKE_VERSION}")
 
 include("cmake/compiler_features.cmake")
 include("cmake/compiler_warnings.cmake")

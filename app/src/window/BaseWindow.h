@@ -3,6 +3,8 @@
 #include <Windows.h>
 #include <d2d1.h>
 
+#include "DpiScale.h"
+
 template <class DERIVED_TYPE>
 class BaseWindow {
 public:
@@ -15,9 +17,20 @@ public:
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)pThis);
 
 			pThis->mHwnd = hwnd;
+
+			pThis->mDpiScale.SetDpi((float)GetDpiForWindow(hwnd));
 		} else {
 			LONG_PTR ptr = GetWindowLongPtr(hwnd, GWLP_USERDATA);
 			pThis        = reinterpret_cast<DERIVED_TYPE*>(ptr);
+		}
+
+		switch (uMsg) {
+		case WM_DPICHANGED:
+			pThis->mDpiScale.SetDpi((float)GetDpiForWindow(hwnd));
+			break;
+		case WM_COMMAND:
+			pThis->HandleCommand(LOWORD(wParam));
+			break;
 		}
 
 		if (pThis) {
@@ -48,6 +61,12 @@ public:
 
 		mHwnd = CreateWindowEx(dwExStyle, ClassName(), lpWindowName, dwStyle, x, y, w, h, NULL, NULL, NULL, this);
 
+		if (mHwnd) {
+			D2D1_SIZE_U size = GetSize();
+			size             = {2 * w - size.width, 2 * h - size.height};
+			MoveWindow(mHwnd, x, y, size.width, size.height, TRUE);
+		}
+
 		return mHwnd ? TRUE : FALSE;
 	}
 
@@ -66,7 +85,9 @@ public:
 protected:
 	virtual LPCWSTR ClassName() const                                      = 0;
 	virtual LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
+	virtual void HandleCommand(WORD command){};
 
 	HWND mHwnd;
 	bool mIsOpen;
+	sb::DpiScale mDpiScale;
 };
