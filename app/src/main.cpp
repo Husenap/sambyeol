@@ -7,8 +7,6 @@
 
 #include "window/MainWindow.h"
 
-#include "resources/resource.h"
-
 int main() {
 	MainWindow window;
 
@@ -26,22 +24,15 @@ int main() {
 	}
 	ShowWindow(window.Window(), SW_SHOW);
 
-	HACCEL hAccel = LoadAccelerators(GetModuleHandle(NULL), MAKEINTRESOURCE(IDR_ACCEL1));
-	if (!hAccel) {
-		std::cout << "Failed to load accelerator table" << std::endl;
-		return 1;
-	}
-
 	MSG msg = {};
 	while (window.IsOpen()) {
 		while (PeekMessage(&msg, window.Window(), NULL, NULL, PM_REMOVE)) {
-			if (!TranslateAccelerator(window.Window(), hAccel, &msg)) {
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
 		}
 
-		InvalidateRect(window.Window(), NULL, FALSE);
+		//InvalidateRect(window.Window(), NULL, FALSE);
+		window.OnPaint();
 		std::this_thread::yield();
 	}
 

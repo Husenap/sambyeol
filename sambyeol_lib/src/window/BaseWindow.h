@@ -28,9 +28,6 @@ public:
 		case WM_DPICHANGED:
 			pThis->mDpiScale.SetDpi((float)GetDpiForWindow(hwnd));
 			break;
-		case WM_COMMAND:
-			pThis->HandleCommand(LOWORD(wParam));
-			break;
 		}
 
 		if (pThis) {
@@ -85,7 +82,6 @@ public:
 protected:
 	virtual LPCWSTR ClassName() const                                      = 0;
 	virtual LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
-	virtual void HandleCommand(WORD command){};
 
 	HWND mHwnd;
 	bool mIsOpen;
