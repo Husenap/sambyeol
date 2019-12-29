@@ -32,29 +32,32 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
 			return -1;
 		}
 		mIsOpen = true;
-		return 0;
+		break;
 	case WM_DESTROY:
 		mIsOpen = false;
 		PostQuitMessage(0);
-		return 0;
+		break;
 	case WM_PAINT:
 		OnPaint();
-		return 0;
+		break;
 	case WM_SIZE:
 		OnResize();
-		return 0;
+		break;
 	case WM_LBUTTONDOWN:
 		OnLButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), (DWORD)wParam);
-		return 0;
+		break;
 	case WM_LBUTTONUP:
 		OnLButtonUp();
-		return 0;
+		break;
 	case WM_MOUSEMOVE:
 		OnMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), (DWORD)wParam);
-		return 0;
+		break;
 	case WM_MOUSEWHEEL:
 		OnMouseWheel((GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA));
-		return 0;
+		break;
+	case WM_SETCURSOR:
+		SetCursor(mCursor);
+		break;
 	default:
 		return DefWindowProc(mHwnd, uMsg, wParam, lParam);
 	}
@@ -66,18 +69,27 @@ void MainWindow::HandleCommand(WORD command) {
 	switch (command) {
 	case ID_DRAW_MODE:
 		std::cout << "Draw mode!" << std::endl;
+		SetMode(Mode::DrawMode);
 		break;
 	case ID_SELECT_MODE:
-		std::cout << "Select mode!" << std::endl;
+		SetMode(Mode::SelectMode);
 		break;
 	case ID_TOGGLE_MODE:
 		std::cout << "Toggle mode!" << std::endl;
+		if (mCurrentMode == Mode::DrawMode) {
+			SetMode(Mode::SelectMode);
+		} else {
+			SetMode(Mode::DrawMode);
+		}
 		break;
 	}
 }
 
 HRESULT MainWindow::Initialize() {
 	HRESULT hr = S_OK;
+
+	mCursor = LoadCursor(NULL, IDC_HAND);
+	SetCursor(mCursor);
 
 	if (SUCCEEDED(hr)) {
 		hr = mWriteFactory->CreateTextFormat(L"Roboto Mono",
@@ -113,9 +125,6 @@ HRESULT MainWindow::CreateGraphicsResources() {
 		hr = mRenderTarget->CreateSolidColorBrush(D2D1::ColorF(1.0f, 1.0f, 0.0f), &mBrush);
 	}
 	if (SUCCEEDED(hr)) {
-		hr = mRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0.2f, 0.2f, 0.2f), &mStroke);
-	}
-	if (SUCCEEDED(hr)) {
 		hr = mRenderTarget->CreateBitmap(
 		    {100, 100},
 		    D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)),
@@ -135,7 +144,6 @@ HRESULT MainWindow::CreateGraphicsResources() {
 void MainWindow::DiscardGraphicsResources() {
 	mRenderTarget.Release();
 	mBrush.Release();
-	mStroke.Release();
 	mBitmap.Release();
 }
 
@@ -160,8 +168,10 @@ void MainWindow::OnPaint() {
 		mRenderTarget->SetTransform(mZoomMatrix);
 
 		mRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::SkyBlue));
+		mBrush->SetColor(D2D1::ColorF(1.0f, 1.0f, 0.0f));
 		mRenderTarget->FillEllipse(mEllipse, mBrush);
-		mRenderTarget->DrawEllipse(mEllipse, mStroke);
+		mBrush->SetColor(D2D1::ColorF(0.0f, 0.0f, 0.0f));
+		mRenderTarget->DrawEllipse(mEllipse, mBrush);
 
 		SYSTEMTIME time;
 		GetLocalTime(&time);
@@ -182,6 +192,10 @@ void MainWindow::OnPaint() {
 		}
 
 		mRenderTarget->SetTransform(mZoomMatrix);
+
+		std::for_each(mShapes.rbegin(), mShapes.rend(), [this](const MyEllipse& ellipse) {
+			ellipse.Draw(mRenderTarget, mBrush);
+		});
 
 		/*
 		mRenderTarget->DrawBitmap(mBitmap,
@@ -211,39 +225,111 @@ void MainWindow::OnResize() {
 }
 
 void MainWindow::OnLButtonDown(int x, int y, DWORD flags) {
-	SetCapture(mHwnd);
-
 	D2D1_POINT_2F dips = mDpiScale.PixelsToDips(x, y);
 	dips.x /= mZoom;
 	dips.y /= mZoom;
 
-	mMousePoint      = dips;
-	mEllipse.point   = mMousePoint;
-	mEllipse.radiusX = mEllipse.radiusY = 1.f;
+	if (mCurrentMode == Mode::DrawMode) {
+		POINT pt = {x, y};
+		if (DragDetect(mHwnd, pt)) {
+			SetCapture(mHwnd);
+
+			mMousePoint = dips;
+
+			InsertEllipse(dips);
+		}
+	} else {
+		ClearSelection();
+
+		if (HitTest(dips)) {
+			SetCapture(mHwnd);
+
+			mMousePoint = Selection()->GetPoint();
+			mMousePoint.x -= dips.x;
+			mMousePoint.y -= dips.y;
+
+			SetMode(Mode::DragMode);
+		}
+	}
 }
 
 void MainWindow::OnLButtonUp() {
+	if ((mCurrentMode == Mode::DrawMode) && Selection()) {
+		ClearSelection();
+	} else if (mCurrentMode == Mode::DragMode) {
+		SetMode(Mode::SelectMode);
+	}
 	ReleaseCapture();
 }
 
 void MainWindow::OnMouseMove(int x, int y, DWORD flags) {
-	if (flags & MK_LBUTTON) {
-		D2D1_POINT_2F dips = mDpiScale.PixelsToDips(x, y);
-		dips.x /= mZoom;
-		dips.y /= mZoom;
+	D2D1_POINT_2F dips = mDpiScale.PixelsToDips(x, y);
+	dips.x /= mZoom;
+	dips.y /= mZoom;
 
-		const float w  = (dips.x - mMousePoint.x) / 2.f;
-		const float h  = (dips.y - mMousePoint.y) / 2.f;
-		const float x1 = mMousePoint.x + w;
-		const float y1 = mMousePoint.y + h;
-
-		mEllipse = D2D1::Ellipse({x1, y1}, w, h);
+	if ((flags & MK_LBUTTON) && Selection()) {
+		if (mCurrentMode == Mode::DrawMode) {
+			const float w  = (dips.x - mMousePoint.x) / 2.f;
+			const float h  = (dips.y - mMousePoint.y) / 2.f;
+			const float x1 = mMousePoint.x + w;
+			const float y1 = mMousePoint.y + h;
+			Selection()->SetPoint({x1, y1});
+			Selection()->SetRadiusX(w);
+			Selection()->SetRadiusY(h);
+		} else if (mCurrentMode == Mode::DragMode) {
+			Selection()->SetPoint({dips.x + mMousePoint.x, dips.y + mMousePoint.y});
+		}
 	}
 }
 
 void MainWindow::OnMouseWheel(float delta) {
 	mZoom       = std::clamp(mZoom + delta * 0.1f, 0.1f, 2.f);
 	mZoomMatrix = D2D1::Matrix3x2F::Scale(mZoom, mZoom);
+}
+
+void MainWindow::SetMode(Mode mode) {
+	mCurrentMode = mode;
+
+	LPWSTR cursor;
+	switch (mode) {
+	case MainWindow::Mode::DrawMode:
+		cursor = IDC_CROSS;
+		break;
+	case MainWindow::Mode::SelectMode:
+		cursor = IDC_HAND;
+		break;
+	case MainWindow::Mode::DragMode:
+		cursor = IDC_SIZEALL;
+		break;
+	}
+
+	mCursor = LoadCursor(NULL, cursor);
+	SetCursor(mCursor);
+}
+
+void MainWindow::InsertEllipse(D2D1_POINT_2F dips) {
+	std::reverse(mShapes.begin(), mShapes.end());
+	mShapes.emplace_back();
+	std::reverse(mShapes.begin(), mShapes.end());
+	mSelection = mShapes.begin();
+}
+
+void MainWindow::ClearSelection() {
+	mSelection = mShapes.end();
+}
+
+bool MainWindow::HitTest(D2D1_POINT_2F dips) {
+	mSelection = std::find_if(
+	    mShapes.begin(), mShapes.end(), [&dips](const MyEllipse& ellipse) { return ellipse.HitTest(dips.x, dips.y); });
+
+	return Selection();
+}
+
+MyEllipse* MainWindow::Selection() {
+	if (mSelection != mShapes.end()) {
+		return &*mSelection;
+	}
+	return nullptr;
 }
 
 void MainWindow::DrawNumber(float angle, const std::wstring& number) {
@@ -254,7 +340,7 @@ void MainWindow::DrawNumber(float angle, const std::wstring& number) {
 	mRenderTarget->SetTransform(D2D1::Matrix3x2F::Scale(0.5f, 0.5f) * D2D1::Matrix3x2F::Translation(x, y) *
 	                            mZoomMatrix);
 
-	mRenderTarget->DrawText(number.data(), (UINT32)number.size(), mTextFormat, D2D1::RectF(), mStroke);
+	mRenderTarget->DrawText(number.data(), (UINT32)number.size(), mTextFormat, D2D1::RectF(), mBrush);
 }
 
 void MainWindow::DrawClockHand(float handLength, float angle, float strokeWidth) {
@@ -263,5 +349,21 @@ void MainWindow::DrawClockHand(float handLength, float angle, float strokeWidth)
 	D2D1_POINT_2F endPoint = mEllipse.point;
 	endPoint.y -= std::min(mEllipse.radiusX, mEllipse.radiusY) * handLength;
 
-	mRenderTarget->DrawLine(mEllipse.point, endPoint, mStroke, mDpiScale.PixelToDip(strokeWidth));
+	mRenderTarget->DrawLine(mEllipse.point, endPoint, mBrush, mDpiScale.PixelToDip(strokeWidth));
+}
+
+void MyEllipse::Draw(CComPtr<ID2D1HwndRenderTarget> renderTarget, CComPtr<ID2D1SolidColorBrush> brush) const {
+	brush->SetColor(mColor);
+	renderTarget->FillEllipse(mEllipse, brush);
+	brush->SetColor(D2D1::ColorF(D2D1::ColorF::Black));
+	renderTarget->DrawEllipse(mEllipse, brush);
+}
+
+bool MyEllipse::HitTest(float x, float y) const {
+	const float a  = mEllipse.radiusX;
+	const float b  = mEllipse.radiusY;
+	const float x1 = x - mEllipse.point.x;
+	const float y1 = y - mEllipse.point.y;
+	const float d  = ((x1 * x1) / (a * a)) + ((y1 * y1) / (b * b));
+	return d <= 1.f;
 }
