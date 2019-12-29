@@ -24,5 +24,6 @@ source_group("src" FILES "src/main.cpp")
 
 set_target_properties(${target_name} PROPERTIES FOLDER ${PROJECT_NAME})
 set_target_properties(${target_name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}/bin )
+set_property(TARGET ${target_name} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 cotire(${target_name})
