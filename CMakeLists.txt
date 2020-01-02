@@ -9,6 +9,7 @@ message("-- CMAKE VERSION: ${CMAKE_VERSION}")
 include("cmake/compiler_features.cmake")
 include("cmake/compiler_warnings.cmake")
 include("cmake/cotire.cmake")
+include("cmake/glm.cmake")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "predefined")
