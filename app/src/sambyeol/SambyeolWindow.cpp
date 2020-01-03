@@ -78,7 +78,7 @@ void SambyeolWindow::OnPaint() {
 			rot*glm::vec4(+1.0f, -1.0f, 0.f, 1.f),
 			rot*glm::vec4(+1.0f, +1.0f, 0.f, 1.f)
 		};
-		const static glm::vec3 ro(0.f, 1.f, -3.f);
+		const static glm::vec3 ro(0.f, 0.f, -3.f);
 		// clang-format on
 
 		const auto pred = [& t = mTime, &aspectRatio, &vertices, &vertices1](glm::vec2 uv) {
