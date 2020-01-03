@@ -14,14 +14,14 @@ void Bitmap::Draw(CComPtr<ID2D1HwndRenderTarget> renderTarget, D2D1_RECT_F destR
 void Bitmap::Process(const BitmapProcess& pred) {
 	uint32_t w = GetWidth();
 	uint32_t h = GetHeight();
-	std::for_each(std::execution::par, mIndices.begin(), mIndices.end(), [&w, &h, &data = mData, &pred](BitmapIndex i) {
+	std::for_each(std::execution::par_unseq, mIndices.begin(), mIndices.end(), [&w, &h, &data = mData, &pred](BitmapIndex i) {
 		const uint32_t x = i % w;
 		const uint32_t y = i / w;
 
-		glm::vec3 c = glm::clamp(pred({(float)x / w, (float)y / h}), 0.f, 1.f);
+		const glm::vec3 c = glm::clamp(pred({(float)x / w, (float)y / h}), 0.f, 1.f)*255.f;
 
-		data[i] = (uint32_t)(uint8_t(c.r * 255.f)) << 16 | (uint32_t)(uint8_t(c.g * 255.f)) << 8 |
-		          (uint32_t)(uint8_t(c.b * 255.f));
+		data[i] = (uint32_t)(c.r) << 16 | (uint32_t)(c.g) << 8 |
+		          (uint32_t)(c.b);
 	});
 	mBitmap->CopyFromMemory(NULL, mData.data(), mBitmap->GetPixelSize().width * sizeof(uint32_t));
 }

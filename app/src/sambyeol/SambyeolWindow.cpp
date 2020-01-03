@@ -45,7 +45,7 @@ bool RayTriangleIntersect(const glm::vec3& ro, const glm::vec3& rd, const glm::v
 
 	const glm::vec3 qvec = glm::cross(tvec, v0v1);
 	st.t                 = glm::dot(rd, qvec) * invDet;
-	if (st.t < 0.f || st.s + st.t > 1.f) {
+	if (st.s < 0.f || st.t < 0.f || st.s + st.t > 1.f) {
 		return false;
 	}
 
@@ -63,26 +63,27 @@ void SambyeolWindow::OnPaint() {
 
 	SetTitle(L"삼별 FPS: " + std::to_wstring(mFPSCounter.GetFPS()));
 
-	const glm::mat4 rot = glm::rotate(glm::mat4(1.0f), mTime, glm::vec3(0.f, 1.f, 0.f));
-	// clang-format off
-	const glm::vec3 vertices[3] = {
-		rot*glm::vec4(-0.5f, +0.5f, 0.f, 1.f),
-		rot*glm::vec4(+0.5f, +0.5f, 0.f, 1.f),
-		rot*glm::vec4(+0.0f, -0.5f, 0.f, 1.f)
-	};
-	const glm::vec3 vertices1[3] = {
-		rot*glm::vec4(+0.5f, +0.5f, 0.f, 1.f),
-		rot*glm::vec4(+0.9f, -0.3f, 0.f, 1.f),
-		rot*glm::vec4(+0.0f, -0.5f, 0.f, 1.f)
-	};
-	// clang-format on
-
 	if (BeginFrame()) {
-		const auto pred = [& t = mTime, &vertices, &vertices1](glm::vec2 uv) {
-			float d = glm::length(uv - 0.5f) * 2.f;
+		float aspectRatio = (float)mBitmap.GetWidth() / mBitmap.GetHeight();
 
-			const glm::vec3 ro(std::cosf(t), 0.f, -2.f + std::sinf(t));
-			const glm::vec3 rd = glm::normalize(glm::vec3((uv - 0.5f) * 2.f, -1.f));
+		const glm::mat4 rot = glm::rotate(glm::mat4(1.0f), mTime, glm::vec3(0.f, 1.f, 0.f));
+		// clang-format off
+		const glm::vec3 vertices[3] = {
+			rot*glm::vec4(-1.0f, -1.0f, 0.f, 1.f),
+			rot*glm::vec4(+1.0f, +1.0f, 0.f, 1.f),
+			rot*glm::vec4(-1.0f, +1.0f, 0.f, 1.f)
+		};
+		const glm::vec3 vertices1[3] = {
+			rot*glm::vec4(-1.0f, -1.0f, 0.f, 1.f),
+			rot*glm::vec4(+1.0f, -1.0f, 0.f, 1.f),
+			rot*glm::vec4(+1.0f, +1.0f, 0.f, 1.f)
+		};
+		const static glm::vec3 ro(0.f, 1.f, -3.f);
+		// clang-format on
+
+		const auto pred = [& t = mTime, &aspectRatio, &vertices, &vertices1](glm::vec2 uv) {
+			glm::vec3 rd = glm::normalize(glm::vec3((uv - 0.5f) * 2.f, -1.f));
+			rd.x *= aspectRatio;
 			float t;
 			glm::vec2 st;
 			if (RayTriangleIntersect(ro, rd, vertices, t, st)) {
@@ -92,7 +93,7 @@ void SambyeolWindow::OnPaint() {
 				return glm::vec3(st, 1.f - st.s - st.t);
 			}
 
-			return glm::vec3(d);
+			return glm::vec3(0.f);
 		};
 		mBitmap.Process(pred);
 		mBitmap.Draw(mRenderTarget, {0.f, 0.f, mRenderTarget->GetSize().width, mRenderTarget->GetSize().height});
