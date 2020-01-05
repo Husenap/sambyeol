@@ -10,7 +10,7 @@
 int main() {
 	SambyeolWindow window;
 
-	if (!window.Create(L"삼별", WS_OVERLAPPEDWINDOW, 0, 0, 0, 800, 600)) {
+	if (!window.Create(L"삼별", WS_OVERLAPPEDWINDOW, 0, 0, 0, 500, 400)) {
 		std::cout << "Failed to create window!" << std::endl;
 		return 1;
 	}

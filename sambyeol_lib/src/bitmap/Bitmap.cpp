@@ -18,7 +18,7 @@ void Bitmap::Process(const BitmapProcess& pred) {
 		const uint32_t x = i % w;
 		const uint32_t y = i / w;
 
-		const glm::vec3 c = glm::clamp(pred({(float)x / w, (float)y / h}), 0.f, 1.f)*255.f;
+		const glm::vec3 c = glm::clamp(pred({(float)x / w, 1.f-((float)y / h)}), 0.f, 1.f)*255.f;
 
 		data[i] = (uint32_t)(c.r) << 16 | (uint32_t)(c.g) << 8 |
 		          (uint32_t)(c.b);

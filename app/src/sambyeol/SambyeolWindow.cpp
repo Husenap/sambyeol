@@ -31,7 +31,7 @@ bool RayTriangleIntersect(const glm::vec3& ro, const glm::vec3& rd, const glm::v
 
 	const float det = glm::dot(v0v1, pvec);
 
-	if (std::fabs(det) < Epsilon) {
+	if (det < Epsilon) {
 		return false;
 	}
 
@@ -64,35 +64,65 @@ void SambyeolWindow::OnPaint() {
 	SetTitle(L"삼별 FPS: " + std::to_wstring(mFPSCounter.GetFPS()));
 
 	if (BeginFrame()) {
+		float fov         = 70.f;
+		float scale       = std::tanf((3.1415f / 360.f) * fov);
 		float aspectRatio = (float)mBitmap.GetWidth() / mBitmap.GetHeight();
 
 		const glm::mat4 rot = glm::rotate(glm::mat4(1.0f), mTime, glm::vec3(0.f, 1.f, 0.f));
 		// clang-format off
-		const glm::vec3 vertices[3] = {
-			rot*glm::vec4(-1.0f, -1.0f, 0.f, 1.f),
-			rot*glm::vec4(+1.0f, +1.0f, 0.f, 1.f),
-			rot*glm::vec4(-1.0f, +1.0f, 0.f, 1.f)
+		const glm::vec3 vertices[8] = {
+			rot*glm::vec4(-1.0f, +1.0f, -1.f, 1.f),
+			rot*glm::vec4(+1.0f, +1.0f, -1.f, 1.f),
+			rot*glm::vec4(-1.0f, -1.0f, -1.f, 1.f),
+			rot*glm::vec4(+1.0f, -1.0f, -1.f, 1.f),
+			rot*glm::vec4(-1.0f, +1.0f, +1.f, 1.f),
+			rot*glm::vec4(+1.0f, +1.0f, +1.f, 1.f),
+			rot*glm::vec4(-1.0f, -1.0f, +1.f, 1.f),
+			rot*glm::vec4(+1.0f, -1.0f, +1.f, 1.f)
 		};
-		const glm::vec3 vertices1[3] = {
-			rot*glm::vec4(-1.0f, -1.0f, 0.f, 1.f),
-			rot*glm::vec4(+1.0f, -1.0f, 0.f, 1.f),
-			rot*glm::vec4(+1.0f, +1.0f, 0.f, 1.f)
+		const unsigned int indices[36] = {
+			// FRONT FACE
+			0, 1, 2,
+			1, 3, 2,
+			// BACK FACE
+			4, 6, 5,
+			6, 7, 5, 
+			// LEFT FACE
+			4, 0, 6,
+			0, 2, 6,
+			// RIGHT FACE
+			1, 5, 3,
+			5, 7, 3,
+			// TOP FACE
+			4, 5, 0,
+			5, 1, 0,
+			// BOTTOM FACE
+			2, 3, 6,
+			3, 7, 6
 		};
-		const static glm::vec3 ro(0.f, 0.f, -3.f);
+		const glm::vec3 ro(0.f, 1.25f*std::sinf(mTime), -4.f);
 		// clang-format on
 
-		const auto pred = [& t = mTime, &aspectRatio, &vertices, &vertices1](glm::vec2 uv) {
-			glm::vec3 rd = glm::normalize(glm::vec3((uv - 0.5f) * 2.f, -1.f));
+		const auto pred = [& time = mTime, &ro, &aspectRatio, &scale, &vertices, &indices](glm::vec2 uv) {
+			glm::vec3 rd = glm::vec3((uv - 0.5f) * 2.f * scale, 1.f);
 			rd.x *= aspectRatio;
+			rd = glm::normalize(rd);
+
 			float t;
 			glm::vec2 st;
-			if (RayTriangleIntersect(ro, rd, vertices, t, st)) {
-				return glm::vec3(st, 1.f - st.s - st.t);
-			}
-			if (RayTriangleIntersect(ro, rd, vertices1, t, st)) {
-				return glm::vec3(st, 1.f - st.s - st.t);
+			float tMin = 1000.f;
+			glm::vec2 stMin;
+			for (int i = 0; i < 36; i += 3) {
+				glm::vec3 verts[3] = {vertices[indices[i]], vertices[indices[i + 1]], vertices[indices[i + 2]]};
+				if (RayTriangleIntersect(ro, rd, verts, t, st) && t < tMin) {
+					tMin = t;
+					stMin = st;
+				}
 			}
 
+			if (tMin < 1000.f) {
+				return glm::vec3(stMin, 1.f - stMin.s - stMin.t);
+			}
 			return glm::vec3(0.f);
 		};
 		mBitmap.Process(pred);
