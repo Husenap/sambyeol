@@ -28,9 +28,6 @@ public:
 		case WM_DPICHANGED:
 			pThis->mDpiScale.SetDpi((float)GetDpiForWindow(hwnd));
 			break;
-		case WM_COMMAND:
-			pThis->HandleCommand(LOWORD(wParam));
-			break;
 		}
 
 		if (pThis) {
@@ -41,8 +38,8 @@ public:
 	}
 
 	BaseWindow()
-	    : mHwnd(NULL)
-	    , mIsOpen(false) {}
+	    : mHwnd(NULL) {}
+	virtual ~BaseWindow() {}
 
 	BOOL Create(LPCWSTR lpWindowName,
 	            DWORD dwStyle,
@@ -51,6 +48,8 @@ public:
 	            int y           = CW_USEDEFAULT,
 	            int w           = CW_USEDEFAULT,
 	            int h           = CW_USEDEFAULT) {
+		mTitle = lpWindowName;
+
 		WNDCLASS wc = {};
 
 		wc.lpfnWndProc   = DERIVED_TYPE::WindowProc;
@@ -71,7 +70,6 @@ public:
 	}
 
 	HWND Window() const { return mHwnd; }
-	bool IsOpen() const { return mIsOpen; }
 	inline RECT GetRect() const {
 		RECT rc;
 		GetClientRect(mHwnd, &rc);
@@ -82,12 +80,18 @@ public:
 		return D2D1::SizeU(rc.right, rc.bottom);
 	}
 
+	const std::wstring& GetTitle() const { return mTitle; }
+	void SetTitle(const std::wstring& title) {
+		mTitle = title;
+		SetWindowTextW(mHwnd, mTitle.c_str());
+	}
+
 protected:
 	virtual LPCWSTR ClassName() const                                      = 0;
 	virtual LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
-	virtual void HandleCommand(WORD command){};
 
 	HWND mHwnd;
-	bool mIsOpen;
 	sb::DpiScale mDpiScale;
+
+	std::wstring mTitle;
 };
