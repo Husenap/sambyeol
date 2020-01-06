@@ -17,7 +17,7 @@ SambyeolWindow::SambyeolWindow()
     , mCurrentTimePoint(mStartTimePoint)
     , mTime(0.f) {
 	Assimp::Importer imp;
-	const aiScene* scene = imp.ReadFile("monkey.fbx", aiProcessPreset_TargetRealtime_Fast);
+	const aiScene* scene = imp.ReadFile("sphere.fbx", aiProcessPreset_TargetRealtime_Fast);
 
 	if (!scene) {
 		std::cout << "Failed to load model file" << std::endl;
@@ -105,7 +105,7 @@ void SambyeolWindow::OnPaint() {
 			{1.f, 0.f, 0.f, 0.f},
 			{0.f, 1.f, 0.f, 0.f},
 			{0.f, 0.f, 1.f, 0.f},
-			{0.f, 0.f, 1.f+std::cosf(mTime), 1.f}
+			{0.f, 0.f, 0.f, 1.f}
 		), mTime*1.5f, glm::vec3(std::cosf(mTime*0.9f+2.f), 1.f, std::sinf(mTime*0.95f)));
 		const glm::mat4 scale = glm::mat4(
 			{1.f, 0.f, 0.f, 0.f},
@@ -113,47 +113,6 @@ void SambyeolWindow::OnPaint() {
 			{0.f, 0.f, 1.f, 0.f},
 			{0.f, 0.f, 0.f, 1.f}
 		);
-		const std::vector<glm::vec3> vertices = {
-			rot*scale*glm::vec4(-1.0f, +1.0f, -1.f, 1.f),
-			rot*scale*glm::vec4(+1.0f, +1.0f, -1.f, 1.f),
-			rot*scale*glm::vec4(-1.0f, -1.0f, -1.f, 1.f),
-			rot*scale*glm::vec4(+1.0f, -1.0f, -1.f, 1.f),
-			rot*scale*glm::vec4(-1.0f, +1.0f, +1.f, 1.f),
-			rot*scale*glm::vec4(+1.0f, +1.0f, +1.f, 1.f),
-			rot*scale*glm::vec4(-1.0f, -1.0f, +1.f, 1.f),
-			rot*scale*glm::vec4(+1.0f, -1.0f, +1.f, 1.f)
-		};
-		const std::vector<glm::vec3> vertexColor = {
-			{1.0f, 0.0f, 0.0f},
-			{0.0f, 1.0f, 0.0f},
-			{0.0f, 0.0f, 1.0f},
-			{1.0f, 1.0f, 0.0f},
-			{0.0f, 1.0f, 1.0f},
-			{1.0f, 0.0f, 1.0f},
-			{0.0f, 1.0f, 0.5f},
-			{0.5f, 1.0f, 0.0f},
-		};
-		const std::vector<unsigned int> indices = {
-			// FRONT FACE
-			0, 1, 2,
-			1, 3, 2,
-			// BACK FACE
-			4, 6, 5,
-			6, 7, 5, 
-			// LEFT FACE
-			4, 0, 6,
-			0, 2, 6,
-			// RIGHT FACE
-			1, 5, 3,
-			5, 7, 3,
-			// TOP FACE
-			4, 5, 0,
-			5, 1, 0,
-			// BOTTOM FACE
-			2, 3, 6,
-			3, 7, 6
-		};
-		const glm::vec3 ro(0.f, 0.f, -3.f);
 		const static glm::vec3 lightDir = glm::normalize(glm::vec3(1.f, 1.f, -1.f));
 
 		float farPlane  = 100.f;
@@ -167,7 +126,6 @@ void SambyeolWindow::OnPaint() {
 			{fs*3.f, 0.f,std::cosf(mTime*1.7f)*1.f-3.f, 1.f}
 		);
 		const glm::mat4 cameraToWorld = glm::inverse(worldToCamera);
-
 		// clang-format on
 
 		std::fill(std::execution::par_unseq, mBitmap.mData.begin(), mBitmap.mData.end(), 0);
@@ -182,9 +140,9 @@ void SambyeolWindow::OnPaint() {
 		    mBitmap.mIndices.begin() + mIndices.size()/3,
 		    [&](uint32_t i) {
 			    // for (std::size_t i = 0; i < mIndices.size(); i += 3) {
-			    const glm::vec3& v0 = mVertices[mIndices[i*3 + 0]];
-			    const glm::vec3& v1 = mVertices[mIndices[i*3 + 1]];
-			    const glm::vec3& v2 = mVertices[mIndices[i*3 + 2]];
+			    const glm::vec3& v0 = rot*glm::vec4(mVertices[mIndices[i*3 + 0]], 1.f);
+			    const glm::vec3& v1 = rot*glm::vec4(mVertices[mIndices[i*3 + 1]], 1.f);
+			    const glm::vec3& v2 = rot*glm::vec4(mVertices[mIndices[i*3 + 2]], 1.f);
 
 			    glm::vec3 v0Raster =
 			        ConvertToRaster(v0, worldToCamera, {-aspectRatio, -1.f, aspectRatio, 1.f}, nearPlane, w, h);
@@ -234,8 +192,8 @@ void SambyeolWindow::OnPaint() {
 						                  if (z < mBitmap.mDepthBuffer[y * w + x]) {
 							                  mBitmap.mDepthBuffer[y * w + x] = z;
 
-							                  glm::vec3 n = glm::normalize(w0 * n0 + w1 * n1 + w2 * n2);
-							                  float NdotV = std::max(0.f, glm::dot(n, -lightDir));
+							                  glm::vec3 n = w0 * n0 + w1 * n1 + w2 * n2;
+							                  float NdotV = std::max(0.1f, glm::dot(n, -lightDir));
 
 							                  const glm::vec3 c = glm::vec3(255.0f * NdotV);
 							                  mBitmap.mData[y * w + x] =
