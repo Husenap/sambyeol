@@ -64,21 +64,42 @@ void SambyeolWindow::OnPaint() {
 	SetTitle(L"삼별 FPS: " + std::to_wstring(mFPSCounter.GetFPS()));
 
 	if (BeginFrame()) {
-		float fov         = 70.f;
-		float scale       = std::tanf((3.1415f / 360.f) * fov);
-		float aspectRatio = (float)mBitmap.GetWidth() / mBitmap.GetHeight();
+		float fov              = 70.f;
+		float perspectiveScale = std::tanf((3.1415f / 360.f) * fov);
+		float aspectRatio      = (float)mBitmap.GetWidth() / mBitmap.GetHeight();
 
-		const glm::mat4 rot = glm::rotate(glm::mat4(1.0f), mTime, glm::vec3(0.f, 1.f, 0.f));
 		// clang-format off
+		const glm::mat4 rot = glm::rotate(glm::mat4(
+			{1.f, 0.f, 0.f, 0.f},
+			{0.f, 1.f, 0.f, 0.f},
+			{0.f, 0.f, 1.f, 0.f},
+			{0.f, 0.f, 1.f+std::cosf(mTime), 1.f}
+		), mTime*1.5f, glm::vec3(0.f, 1.f, 1.f));
+		const glm::mat4 scale = glm::mat4(
+			{1.f, 0.f, 0.f, 0.f},
+			{0.f, 2.f, 0.f, 0.f},
+			{0.f, 0.f, 1.f, 0.f},
+			{0.f, 0.f, 0.f, 1.f}
+		);
 		const glm::vec3 vertices[8] = {
-			rot*glm::vec4(-1.0f, +1.0f, -1.f, 1.f),
-			rot*glm::vec4(+1.0f, +1.0f, -1.f, 1.f),
-			rot*glm::vec4(-1.0f, -1.0f, -1.f, 1.f),
-			rot*glm::vec4(+1.0f, -1.0f, -1.f, 1.f),
-			rot*glm::vec4(-1.0f, +1.0f, +1.f, 1.f),
-			rot*glm::vec4(+1.0f, +1.0f, +1.f, 1.f),
-			rot*glm::vec4(-1.0f, -1.0f, +1.f, 1.f),
-			rot*glm::vec4(+1.0f, -1.0f, +1.f, 1.f)
+			rot*scale*glm::vec4(-1.0f, +1.0f, -1.f, 1.f),
+			rot*scale*glm::vec4(+1.0f, +1.0f, -1.f, 1.f),
+			rot*scale*glm::vec4(-1.0f, -1.0f, -1.f, 1.f),
+			rot*scale*glm::vec4(+1.0f, -1.0f, -1.f, 1.f),
+			rot*scale*glm::vec4(-1.0f, +1.0f, +1.f, 1.f),
+			rot*scale*glm::vec4(+1.0f, +1.0f, +1.f, 1.f),
+			rot*scale*glm::vec4(-1.0f, -1.0f, +1.f, 1.f),
+			rot*scale*glm::vec4(+1.0f, -1.0f, +1.f, 1.f)
+		};
+		const glm::vec3 vertexColor[8] = {
+			{1.0f, 0.0f, 0.0f},
+			{0.0f, 1.0f, 0.0f},
+			{0.0f, 0.0f, 1.0f},
+			{1.0f, 1.0f, 0.0f},
+			{0.0f, 1.0f, 1.0f},
+			{1.0f, 0.0f, 1.0f},
+			{0.0f, 1.0f, 0.5f},
+			{0.5f, 1.0f, 0.0f},
 		};
 		const unsigned int indices[36] = {
 			// FRONT FACE
@@ -100,31 +121,33 @@ void SambyeolWindow::OnPaint() {
 			2, 3, 6,
 			3, 7, 6
 		};
-		const glm::vec3 ro(0.f, 1.25f*std::sinf(mTime), -4.f);
+		const glm::vec3 ro(0.f, 0.f, -4.f);
 		// clang-format on
 
-		const auto pred = [& time = mTime, &ro, &aspectRatio, &scale, &vertices, &indices](glm::vec2 uv) {
-			glm::vec3 rd = glm::vec3((uv - 0.5f) * 2.f * scale, 1.f);
-			rd.x *= aspectRatio;
-			rd = glm::normalize(rd);
+		const auto pred =
+		    [& time = mTime, &ro, &aspectRatio, &perspectiveScale, &vertices, &indices, &vertexColor](glm::vec2 uv) {
+			    glm::vec3 rd = glm::vec3((uv - 0.5f) * 2.f * perspectiveScale, 1.f);
+			    rd.x *= aspectRatio;
+			    rd = glm::normalize(rd);
 
-			float t;
-			glm::vec2 st;
-			float tMin = 1000.f;
-			glm::vec2 stMin;
-			for (int i = 0; i < 36; i += 3) {
-				glm::vec3 verts[3] = {vertices[indices[i]], vertices[indices[i + 1]], vertices[indices[i + 2]]};
-				if (RayTriangleIntersect(ro, rd, verts, t, st) && t < tMin) {
-					tMin = t;
-					stMin = st;
-				}
-			}
+			    float t;
+			    glm::vec2 st;
+			    float tMin = 1000.f;
+			    glm::vec3 col;
+			    for (int i = 0; i < 36; i += 3) {
+				    glm::vec3 verts[3] = {vertices[indices[i]], vertices[indices[i + 1]], vertices[indices[i + 2]]};
+				    if (RayTriangleIntersect(ro, rd, verts, t, st) && t < tMin) {
+					    tMin = t;
+					    col  = (1.f - st.s - st.t) * vertexColor[indices[i]] + st.s * vertexColor[indices[i + 1]] +
+					          st.t * vertexColor[indices[i + 2]];
+				    }
+			    }
 
-			if (tMin < 1000.f) {
-				return glm::vec3(stMin, 1.f - stMin.s - stMin.t);
-			}
-			return glm::vec3(0.f);
-		};
+			    if (tMin < 1000.f) {
+				    return glm::pow(col, glm::vec3(1.f / 1.8f));
+			    }
+			    return glm::vec3(0.f);
+		    };
 		mBitmap.Process(pred);
 		mBitmap.Draw(mRenderTarget, {0.f, 0.f, mRenderTarget->GetSize().width, mRenderTarget->GetSize().height});
 
