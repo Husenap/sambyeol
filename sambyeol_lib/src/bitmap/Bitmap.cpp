@@ -23,7 +23,11 @@ void Bitmap::Process(const BitmapProcess& pred) {
 
 		    data[i] = (uint32_t)(c.r) << 16 | (uint32_t)(c.g) << 8 | (uint32_t)(c.b);
 	    });
-	mBitmap->CopyFromMemory(NULL, mData.data(), mBitmap->GetPixelSize().width * sizeof(uint32_t));
+	Update();
+}
+
+void Bitmap::Update() {
+	mBitmap->CopyFromMemory(NULL, mData.data(), mBitmap->GetPixelSize().width * sizeof(BitmapPixel));
 }
 
 HRESULT Bitmap::Resize(CComPtr<ID2D1HwndRenderTarget> renderTarget, D2D1_SIZE_U size) {
@@ -35,7 +39,9 @@ HRESULT Bitmap::Resize(CComPtr<ID2D1HwndRenderTarget> renderTarget, D2D1_SIZE_U 
 	    &mBitmap);
 
 	mData.resize((std::size_t)mBitmap->GetPixelSize().width * mBitmap->GetPixelSize().height);
-	mBitmap->CopyFromMemory(NULL, mData.data(), mBitmap->GetPixelSize().width * sizeof(uint32_t));
+	mBitmap->CopyFromMemory(NULL, mData.data(), mBitmap->GetPixelSize().width * sizeof(BitmapPixel));
+
+	mDepthBuffer.resize(mData.size());
 
 	mIndices.resize(mData.size());
 	std::iota(mIndices.begin(), mIndices.end(), 0);

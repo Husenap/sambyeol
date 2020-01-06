@@ -17,6 +17,8 @@ public:
 	void Draw(CComPtr<ID2D1HwndRenderTarget> renderTarget, D2D1_RECT_F destRect);
 	void Process(const BitmapProcess& pred);
 
+	void Update();
+
 	HRESULT Resize(CComPtr<ID2D1HwndRenderTarget> renderTarget, D2D1_SIZE_U size);
 
 	inline D2D1_SIZE_U GetSize() const {
@@ -28,8 +30,10 @@ public:
 	inline UINT32 GetWidth() const { return GetSize().width; }
 	inline UINT32 GetHeight() const { return GetSize().height; }
 
-private:
 	CComPtr<ID2D1Bitmap> mBitmap;
 	std::vector<BitmapPixel> mData;
 	std::vector<BitmapIndex> mIndices;
+	std::vector<float> mDepthBuffer;
+
+private:
 };

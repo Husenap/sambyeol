@@ -1,11 +1,13 @@
 ﻿#include "SambyeolWindow.h"
 
 #include <string>
+#include <execution>
 
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/component_wise.hpp>
 
 constexpr float Epsilon = 1e-8f;
 
@@ -15,7 +17,7 @@ SambyeolWindow::SambyeolWindow()
     , mCurrentTimePoint(mStartTimePoint)
     , mTime(0.f) {
 	Assimp::Importer imp;
-	const aiScene* scene = imp.ReadFile("monkey.fbx", aiProcessPreset_TargetRealtime_MaxQuality);
+	const aiScene* scene = imp.ReadFile("monkey.fbx", aiProcessPreset_TargetRealtime_Fast);
 
 	if (!scene) {
 		std::cout << "Failed to load model file" << std::endl;
@@ -53,37 +55,35 @@ LRESULT SambyeolWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	return TRUE;
 }
 
-bool RayTriangleIntersect(
-    const glm::vec3& ro, const glm::vec3& rd, const glm::vec3 v[3], float& t, glm::vec2& st, glm::vec3& normal) {
-	const glm::vec3 v0v1 = v[1] - v[0];
-	const glm::vec3 v0v2 = v[2] - v[0];
-	const glm::vec3 pvec = glm::cross(rd, v0v2);
+glm::vec3 MultMatrixVector(const glm::mat4& m, const glm::vec3& v) {
+	glm::vec4 p = m * glm::vec4(v, 1.f);
+	return glm::vec3(p) / p.w;
+}
 
-	const float det = glm::dot(v0v1, pvec);
+glm::vec3 ConvertToRaster(const glm::vec3& vertexWorld,
+	const glm::mat4& worldToCamera,
+	const glm::vec4& rect,
+	const float nearPlane,
+	const uint32_t imageWidth,
+	const uint32_t imageHeight) {
+	glm::vec3 vertexCamera = MultMatrixVector(worldToCamera, vertexWorld);
 
-	if (det < Epsilon) {
-		return false;
-	}
+	glm::vec2 vertexScreen = nearPlane * vertexCamera / -vertexCamera.z;
+	glm::vec2 vertexNDC    = {
+        (2.f * vertexScreen.x - (rect.z + rect.x)) / (rect.z - rect.x),
+        (2.f * vertexScreen.y - (rect.w + rect.y)) / (rect.w - rect.y),
+    };
 
-	const float invDet = 1.f / det;
 
-	const glm::vec3 tvec = ro - v[0];
-	st.s                 = glm::dot(tvec, pvec) * invDet;
-	if (st.s < 0.f || st.s > 1.0f) {
-		return false;
-	}
+	return {
+		(vertexNDC.x + 1.f) / 2.f * imageWidth,
+		(1.f - vertexNDC.y) / 2.f * imageHeight,
+		-vertexCamera.z
+	};
+}
 
-	const glm::vec3 qvec = glm::cross(tvec, v0v1);
-	st.t                 = glm::dot(rd, qvec) * invDet;
-	if (st.s < 0.f || st.t < 0.f || st.s + st.t > 1.f) {
-		return false;
-	}
-
-	t = glm::dot(v0v2, qvec) * invDet;
-
-	normal = glm::normalize(glm::cross(v0v1, v0v2));
-
-	return true;
+float EdgeFunction(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c) {
+	return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
 }
 
 void SambyeolWindow::OnPaint() {
@@ -113,7 +113,7 @@ void SambyeolWindow::OnPaint() {
 			{0.f, 0.f, 1.f, 0.f},
 			{0.f, 0.f, 0.f, 1.f}
 		);
-		const glm::vec3 vertices[8] = {
+		const std::vector<glm::vec3> vertices = {
 			rot*scale*glm::vec4(-1.0f, +1.0f, -1.f, 1.f),
 			rot*scale*glm::vec4(+1.0f, +1.0f, -1.f, 1.f),
 			rot*scale*glm::vec4(-1.0f, -1.0f, -1.f, 1.f),
@@ -123,7 +123,7 @@ void SambyeolWindow::OnPaint() {
 			rot*scale*glm::vec4(-1.0f, -1.0f, +1.f, 1.f),
 			rot*scale*glm::vec4(+1.0f, -1.0f, +1.f, 1.f)
 		};
-		const glm::vec3 vertexColor[8] = {
+		const std::vector<glm::vec3> vertexColor = {
 			{1.0f, 0.0f, 0.0f},
 			{0.0f, 1.0f, 0.0f},
 			{0.0f, 0.0f, 1.0f},
@@ -133,7 +133,7 @@ void SambyeolWindow::OnPaint() {
 			{0.0f, 1.0f, 0.5f},
 			{0.5f, 1.0f, 0.0f},
 		};
-		const unsigned int indices[36] = {
+		const std::vector<unsigned int> indices = {
 			// FRONT FACE
 			0, 1, 2,
 			1, 3, 2,
@@ -155,38 +155,100 @@ void SambyeolWindow::OnPaint() {
 		};
 		const glm::vec3 ro(0.f, 0.f, -3.f);
 		const static glm::vec3 lightDir = glm::normalize(glm::vec3(1.f, 1.f, -1.f));
+
+		float farPlane  = 100.f;
+		float nearPlane = 1.f;
+		float fc = std::cosf(mTime);
+		float fs = std::sinf(mTime);
+		const glm::mat4 worldToCamera = glm::mat4(
+			{1.f, 0.f, 0.f, 0.f},
+			{0.f, 1.f, 0.f, 0.f},
+			{0.f, 0.f, 1.f, 0.f},
+			{fs*3.f, 0.f,std::cosf(mTime*1.7f)*1.f-3.f, 1.f}
+		);
+		const glm::mat4 cameraToWorld = glm::inverse(worldToCamera);
+
 		// clang-format on
 
-		const auto pred =
-		    [& time = mTime, &ro, &aspectRatio, &perspectiveScale, &vertices = mVertices, &indices = mIndices, &vertexColor = mNormals](glm::vec2 uv) {
-			    glm::vec3 rd = glm::vec3((uv - 0.5f) * 2.f * perspectiveScale, 1.f);
-			    rd.x *= aspectRatio;
-			    rd = glm::normalize(rd);
+		std::fill(std::execution::par_unseq, mBitmap.mData.begin(), mBitmap.mData.end(), 0);
+		std::fill(std::execution::par_unseq, mBitmap.mDepthBuffer.begin(), mBitmap.mDepthBuffer.end(), farPlane);
 
-			    float t;
-			    glm::vec2 st;
-			    float tMin = 1000.f;
-			    glm::vec3 normal;
-			    glm::vec3 col;
-			    for (int i = 0; i < indices.size(); i += 3) {
-				    glm::vec3 verts[3] = {vertices[indices[i]], vertices[indices[i + 1]], vertices[indices[i + 2]]};
-				    if (RayTriangleIntersect(ro, rd, verts, t, st, normal) && t < tMin) {
-					    tMin = t;
-					    col  = (1.f - st.s - st.t) * vertexColor[indices[i]] + st.s * vertexColor[indices[i + 1]] +
-					          st.t * vertexColor[indices[i + 2]];
+		uint32_t w = mBitmap.GetWidth();
+		uint32_t h = mBitmap.GetHeight();
 
-					    float attenuation = glm::max(glm::dot(normal, lightDir), 0.05f);
+		std::for_each(
+		    std::execution::par,
+		    mBitmap.mIndices.begin(),
+		    mBitmap.mIndices.begin() + mIndices.size()/3,
+		    [&](uint32_t i) {
+			    // for (std::size_t i = 0; i < mIndices.size(); i += 3) {
+			    const glm::vec3& v0 = mVertices[mIndices[i*3 + 0]];
+			    const glm::vec3& v1 = mVertices[mIndices[i*3 + 1]];
+			    const glm::vec3& v2 = mVertices[mIndices[i*3 + 2]];
 
-					    col = glm::vec3(attenuation);
-				    }
-			    }
+			    glm::vec3 v0Raster =
+			        ConvertToRaster(v0, worldToCamera, {-aspectRatio, -1.f, aspectRatio, 1.f}, nearPlane, w, h);
+			    glm::vec3 v1Raster =
+			        ConvertToRaster(v1, worldToCamera, {-aspectRatio, -1.f, aspectRatio, 1.f}, nearPlane, w, h);
+			    glm::vec3 v2Raster =
+			        ConvertToRaster(v2, worldToCamera, {-aspectRatio, -1.f, aspectRatio, 1.f}, nearPlane, w, h);
 
-			    if (tMin < 1000.f) {
-				    return glm::pow(col, glm::vec3(1.f / 1.8f));
-			    }
-			    return glm::vec3(0.f);
-		    };
-		mBitmap.Process(pred);
+			    v0Raster.z = 1.f / v0Raster.z;
+			    v1Raster.z = 1.f / v1Raster.z;
+			    v2Raster.z = 1.f / v2Raster.z;
+
+			    float xmin = glm::compMin(glm::vec3(v0Raster.x, v1Raster.x, v2Raster.x));
+			    float ymin = glm::compMin(glm::vec3(v0Raster.y, v1Raster.y, v2Raster.y));
+			    float xmax = glm::compMax(glm::vec3(v0Raster.x, v1Raster.x, v2Raster.x));
+			    float ymax = glm::compMax(glm::vec3(v0Raster.y, v1Raster.y, v2Raster.y));
+
+			    if (xmin > w - 1 || xmax < 0 || ymin > h - 1 || ymax < 0) return;
+
+				glm::vec3 n0 = mNormals[mIndices[i * 3 + 0]];
+				glm::vec3 n1 = mNormals[mIndices[i * 3 + 1]];
+				glm::vec3 n2 = mNormals[mIndices[i * 3 + 2]];
+
+			    uint32_t x0 = std::max(int32_t(0), (int32_t)(std::floor(xmin)));
+			    uint32_t y0 = std::max(int32_t(0), (int32_t)(std::floor(ymin)));
+			    uint32_t x1 = std::min(int32_t(w) - 1, (int32_t)(std::floor(xmax)));
+			    uint32_t y1 = std::min(int32_t(h) - 1, (int32_t)(std::floor(ymax)));
+
+			    float area = EdgeFunction(v0Raster, v1Raster, v2Raster);
+
+			    std::for_each(std::execution::seq,
+			                  mBitmap.mIndices.begin() + y0,
+			                  mBitmap.mIndices.begin() + y1 + 1,
+			                  [&](uint32_t y) {
+				                  // for (uint32_t y = y0; y <= y1; ++y) {
+				                  for (uint32_t x = x0; x <= x1; ++x) {
+					                  glm::vec3 pixelSample(x + 0.5f, y + 0.5f, 0.f);
+					                  float w0 = EdgeFunction(v1Raster, v2Raster, pixelSample);
+					                  float w1 = EdgeFunction(v2Raster, v0Raster, pixelSample);
+					                  float w2 = EdgeFunction(v0Raster, v1Raster, pixelSample);
+					                  if (w0 >= 0.f && w1 >= 0.f && w2 >= 0.f) {
+						                  w0 /= area;
+						                  w1 /= area;
+						                  w2 /= area;
+						                  float z = 1.f / (v0Raster.z * w0 + v1Raster.z * w1 + v2Raster.z * w2);
+
+						                  if (z < mBitmap.mDepthBuffer[y * w + x]) {
+							                  mBitmap.mDepthBuffer[y * w + x] = z;
+
+							                  glm::vec3 n = glm::normalize(w0 * n0 + w1 * n1 + w2 * n2);
+							                  float NdotV = std::max(0.f, glm::dot(n, -lightDir));
+
+							                  const glm::vec3 c = glm::vec3(255.0f * NdotV);
+							                  mBitmap.mData[y * w + x] =
+							                      (uint32_t)(c.r) << 16 | (uint32_t)(c.g) << 8 | (uint32_t)(c.b);
+						                  }
+					                  }
+				                  }
+				                  //}
+			                  });
+			    //}
+		    });
+
+		mBitmap.Update();
 		mBitmap.Draw(mRenderTarget, {0.f, 0.f, mRenderTarget->GetSize().width, mRenderTarget->GetSize().height});
 
 		EndFrame();
