@@ -30,7 +30,7 @@ HRESULT Bitmap::Resize(CComPtr<ID2D1HwndRenderTarget> renderTarget, D2D1_SIZE_U 
 	mBitmap.Release();
 
 	HRESULT hr = renderTarget->CreateBitmap(
-	    {size.width / 4, size.height / 4},
+	    {size.width / 1, size.height / 1},
 	    D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)),
 	    &mBitmap);
 

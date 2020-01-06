@@ -19,4 +19,8 @@ private:
 	std::chrono::steady_clock::time_point mStartTimePoint;
 	std::chrono::steady_clock::time_point mCurrentTimePoint;
 	float mTime;
+
+	std::vector<glm::vec3> mVertices;
+	std::vector<unsigned int> mIndices;
+	std::vector<glm::vec3> mNormals;
 };

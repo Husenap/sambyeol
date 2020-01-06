@@ -16,8 +16,7 @@ source_group("src\\sambyeol" FILES ${src_sambyeol})
 source_group("src" FILES "src/main.cpp")
 
 target_link_libraries(${target_name}
-    "sambyeol_lib"
-    "d2d1")
+    "sambyeol_lib")
 
 set_target_properties(${target_name} PROPERTIES
     FOLDER ${PROJECT_NAME}

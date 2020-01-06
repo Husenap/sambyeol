@@ -23,6 +23,8 @@ add_library(${target_name} STATIC ${src_files})
 
 target_link_libraries(${target_name}
     "compiler-warnings"
+    "d2d1"
+    "assimp"
     "glm_static")
 
 source_group("src\\util" FILES ${src_util})
