@@ -16,5 +16,5 @@ if(NOT glm_POPULATED)
     add_subdirectory(${glm_SOURCE_DIR} ${glm_BINARY_DIR})
 endif()
 
-set_target_properties(glm_static PROPERTIES FOLDER "thirdparty")
+set_target_properties(glm_static PROPERTIES FOLDER "thirdparty//glm")
 target_include_directories(glm_static PUBLIC ${glm_SOURCE_DIR})
